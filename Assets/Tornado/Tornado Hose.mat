@@ -58,25 +58,29 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaCutoff: 0.5
-    - _BeansScale: 2
+    - _BeansScale: 1.55
     - _EnvironmentReflections: 1
-    - _Float0: 11.5
-    - _Float1: 0
+    - _Float0: 31.46
+    - _Float1: 0.63
+    - _Float2: 246.1
+    - _Float3: 0.84
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _RadiusBottom: -0.87
-    - _RadiusTop: 1.49
+    - _RadiusBottom: 0.31
+    - _RadiusTop: 2.45
     - _ReceiveShadows: 1
+    - _ScaleTextureBasedOnRadius: 0.327
     - _SpecularHighlights: 1
-    - _TextureHorizontalSpeed: 0.79
-    - _TextureVerticalSpeed: -0.13
-    - _WobbleMoveSpeedX: -0.51
-    - _WobbleMoveSpeedY: -0.32
-    - _WobbleStrength: 1.33
+    - _TextureHorizontalSpeed: 0.93
+    - _TextureVerticalSpeed: 0
+    - _WobbleMoveSpeedX: -0.3
+    - _WobbleMoveSpeedY: -0.63
+    - _WobbleStrength: 1.25
     m_Colors:
+    - _Color0: {r: 6.883182, g: 1.9995865, b: 0, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _Vector3: {r: -2.96, g: 2.13, b: 0, a: 0}
-    - _Vector4: {r: 1, g: 2, b: 0, a: 0}
+    - _Vector4: {r: 1, g: 1, b: 0, a: 0}
     - _WobbleMoveSpeed: {r: 0.11, g: 0.02, b: 0, a: 0}
     - _WobbleScale: {r: -1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []

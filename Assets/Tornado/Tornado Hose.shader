@@ -7,18 +7,19 @@ Shader "Tornado Hose"
 		[HideInInspector] _AlphaCutoff("Alpha Cutoff ", Range(0, 1)) = 0.5
 		[HideInInspector] _EmissionColor("Emission Color", Color) = (1,1,1,1)
 		_Beans("Beans", 2D) = "white" {}
-		_RadiusBottom("RadiusBottom", Range( -2 , 5)) = 0
+		_RadiusBottom("RadiusBottom", Range( 0 , 2)) = 0
 		_RadiusTop("RadiusTop", Range( 0 , 5)) = 0
 		_BeansScale("BeansScale", Range( 0.1 , 10)) = 1
-		_Vector4("Vector 4", Vector) = (0,0,0,0)
 		_TextureHorizontalSpeed("TextureHorizontalSpeed", Range( -5 , 5)) = 0
 		_TextureVerticalSpeed("TextureVerticalSpeed", Range( -1 , 1)) = 0
 		_WobbleTexture("WobbleTexture", 2D) = "white" {}
 		_WobbleStrength("WobbleStrength", Range( 0 , 5)) = 1
 		_WobbleScale("WobbleScale", Vector) = (1,1,0,0)
-		_Float1("Float 1", Float) = 0
 		_WobbleMoveSpeedX("WobbleMoveSpeedX", Range( -1 , 1)) = 0
 		_WobbleMoveSpeedY("WobbleMoveSpeedY", Range( -1 , 1)) = 0
+		_ScaleTextureBasedOnRadius("ScaleTextureBasedOnRadius", Range( 0 , 1)) = 0
+		[HDR]_Color0("Color 0", Color) = (0,0,0,0)
+		_Float3("Float 3", Float) = 0
 
 
 		//_TessPhongStrength( "Tess Phong Strength", Range( 0, 1 ) ) = 0.5
@@ -265,17 +266,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -290,26 +292,7 @@ Shader "Tornado Hose"
 			sampler2D _Beans;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -317,18 +300,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 				o.ase_texcoord3.xy = v.ase_texcoord.xy;
@@ -343,7 +327,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -479,17 +463,19 @@ Shader "Tornado Hose"
 					#endif
 				#endif
 
-				float HeightRelative77 = ( IN.ase_texcoord4.xyz.y / ( 2.0 * PI ) );
-				float lerpResult90 = lerp( _Vector4.x , _Vector4.y , HeightRelative77);
-				float2 appendResult95 = (float2(( _TextureHorizontalSpeed / lerpResult90 ) , _TextureVerticalSpeed));
+				float2 appendResult95 = (float2(_TextureHorizontalSpeed , _TextureVerticalSpeed));
 				float2 temp_output_97_0 = ( appendResult95 * _TimeParameters.x );
-				float2 texCoord73 = IN.ase_texcoord3.xy * float2( 1,1 ) + temp_output_97_0;
-				float2 appendResult80 = (float2(( ( texCoord73.x - 0.5 ) * lerpResult90 ) , ( texCoord73.y - 0.5 )));
-				float2 temp_output_89_0 = ( _BeansScale * ( appendResult80 + float2( 0.5,0.5 ) ) );
+				float2 temp_cast_0 = (_BeansScale).xx;
+				float2 texCoord73 = IN.ase_texcoord3.xy * temp_cast_0 + float2( 0,0 );
+				float HeightRelative77 = ( IN.ase_texcoord4.xyz.y / ( 2.0 * PI ) );
+				float temp_output_145_0 = ( ( texCoord73.x - ( _BeansScale / 2.0 ) ) * ( ( HeightRelative77 * ( _RadiusTop / _RadiusBottom ) * _ScaleTextureBasedOnRadius ) + 1.0 ) );
+				float2 appendResult146 = (float2(temp_output_145_0 , texCoord73.y));
+				float4 tex2DNode12 = tex2D( _Beans, ( temp_output_97_0 + appendResult146 ) );
+				float4 lerpResult182 = lerp( ( tex2DNode12 * _Color0 ) , tex2DNode12 , HeightRelative77);
 				
 				float3 BakedAlbedo = 0;
 				float3 BakedEmission = 0;
-				float3 Color = tex2D( _Beans, temp_output_89_0 ).rgb;
+				float3 Color = lerpResult182.rgb;
 				float Alpha = 1;
 				float AlphaClipThreshold = 0.5;
 				float AlphaClipThresholdShadow = 0.5;
@@ -595,17 +581,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -619,26 +606,7 @@ Shader "Tornado Hose"
 			sampler2D _WobbleTexture;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			float3 _LightDirection;
 			float3 _LightPosition;
 
@@ -649,18 +617,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO( o );
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 
@@ -670,7 +639,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -904,17 +873,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -928,26 +898,7 @@ Shader "Tornado Hose"
 			sampler2D _WobbleTexture;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			VertexOutput VertexFunction( VertexInput v  )
 			{
 				VertexOutput o = (VertexOutput)0;
@@ -955,18 +906,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 
@@ -976,7 +928,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -1181,17 +1133,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1205,26 +1158,7 @@ Shader "Tornado Hose"
 			sampler2D _WobbleTexture;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			int _ObjectId;
 			int _PassValue;
 
@@ -1243,18 +1177,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 
@@ -1264,7 +1199,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -1450,17 +1385,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1474,26 +1410,7 @@ Shader "Tornado Hose"
 			sampler2D _WobbleTexture;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			float4 _SelectionID;
 
 			struct SurfaceDescription
@@ -1511,18 +1428,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 
@@ -1532,7 +1450,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -1734,17 +1652,18 @@ Shader "Tornado Hose"
 			};
 
 			CBUFFER_START(UnityPerMaterial)
+			float4 _Color0;
 			float2 _WobbleScale;
-			float2 _Vector4;
+			float _Float3;
 			float _RadiusBottom;
 			float _RadiusTop;
 			float _WobbleStrength;
-			float _Float1;
 			float _WobbleMoveSpeedX;
 			float _WobbleMoveSpeedY;
-			float _BeansScale;
 			float _TextureHorizontalSpeed;
 			float _TextureVerticalSpeed;
+			float _BeansScale;
+			float _ScaleTextureBasedOnRadius;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
 				float _TessValue;
@@ -1758,26 +1677,7 @@ Shader "Tornado Hose"
 			sampler2D _WobbleTexture;
 
 
-			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
-			{
-				original -= center;
-				float C = cos( angle );
-				float S = sin( angle );
-				float t = 1 - C;
-				float m00 = t * u.x * u.x + C;
-				float m01 = t * u.x * u.y - S * u.z;
-				float m02 = t * u.x * u.z + S * u.y;
-				float m10 = t * u.x * u.y + S * u.z;
-				float m11 = t * u.y * u.y + C;
-				float m12 = t * u.y * u.z - S * u.x;
-				float m20 = t * u.x * u.z - S * u.y;
-				float m21 = t * u.y * u.z + S * u.x;
-				float m22 = t * u.z * u.z + C;
-				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
-				return mul( finalMatrix, original ) + center;
-			}
 			
-
 			struct SurfaceDescription
 			{
 				float Alpha;
@@ -1793,18 +1693,19 @@ Shader "Tornado Hose"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
+				float lerpResult189 = lerp( ( v.positionOS.xyz.y * HeightRelative77 * _Float3 ) , v.positionOS.xyz.y , _Float3);
+				float3 appendResult188 = (float3(v.positionOS.xyz.x , lerpResult189 , v.positionOS.xyz.z));
 				float2 appendResult47 = (float2(v.positionOS.xyz.x , v.positionOS.xyz.z));
 				float2 normalizeResult48 = normalize( appendResult47 );
-				float HeightRelative77 = ( v.positionOS.xyz.y / ( 2.0 * PI ) );
-				float lerpResult54 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
-				float2 break57 = ( normalizeResult48 * lerpResult54 );
-				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
-				float2 texCoord126 = v.ase_texcoord.xy * float2( 1,1 ) + float2( 0,0 );
-				float3 rotatedValue119 = RotateAroundAxis( float3( 0.5,0.5,0 ), float3( ( texCoord126 > float2( 1,1 ) ? (float2( 1,1 ) + (texCoord126 - float2( 1,1 )) * (float2( 0,0 ) - float2( 1,1 )) / (float2( 2,2 ) - float2( 1,1 ))) : texCoord126 ) ,  0.0 ), float3( 0,0,1 ), ( _Float1 * PI ) );
-				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
-				float2 temp_output_108_0 = ( appendResult125 * _TimeParameters.x );
 				float2 DirectionXZ110 = normalizeResult48;
-				float2 break117 = ( ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( ( ( rotatedValue119 * float3( _WobbleScale ,  0.0 ) ) + float3( temp_output_108_0 ,  0.0 ) ).xy, 0, 0.0) ).r ) * DirectionXZ110 );
+				float lerpResult150 = lerp( _RadiusBottom , _RadiusTop , HeightRelative77);
+				float2 break57 = ( DirectionXZ110 * ( lerpResult150 - 1.0 ) );
+				float3 appendResult111 = (float3(break57.x , 0.0 , break57.y));
+				float2 appendResult125 = (float2(_WobbleMoveSpeedX , _WobbleMoveSpeedY));
+				float2 texCoord106 = v.ase_texcoord.xy * _WobbleScale + ( appendResult125 * _TimeParameters.x );
+				float temp_output_114_0 = ( _WobbleStrength * tex2Dlod( _WobbleTexture, float4( texCoord106, 0, 0.0) ).r );
+				float2 break117 = ( temp_output_114_0 * DirectionXZ110 );
 				float3 appendResult116 = (float3(break117.x , 0.0 , break117.y));
 				
 
@@ -1814,7 +1715,7 @@ Shader "Tornado Hose"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( v.positionOS.xyz + appendResult111 + appendResult116 );
+				float3 vertexValue = ( appendResult188 + appendResult111 + appendResult116 );
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					v.positionOS.xyz = vertexValue;
@@ -1965,69 +1866,86 @@ Shader "Tornado Hose"
 }
 /*ASEBEGIN
 Version=19303
-Node;AmplifyShaderEditor.TextureCoordinatesNode;126;-112,304;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.TFHCRemapNode;136;256,336;Inherit;False;5;0;FLOAT2;0,0;False;1;FLOAT2;1,1;False;2;FLOAT2;2,2;False;3;FLOAT2;1,1;False;4;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RangedFloatNode;121;240,608;Inherit;False;Property;_Float1;Float 1;10;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.Compare;135;448,144;Inherit;False;2;4;0;FLOAT2;0,0;False;1;FLOAT2;1,1;False;2;FLOAT2;0,0;False;3;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RangedFloatNode;123;-464,496;Inherit;False;Property;_WobbleMoveSpeedX;WobbleMoveSpeedX;11;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;124;-496,640;Inherit;False;Property;_WobbleMoveSpeedY;WobbleMoveSpeedY;12;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.PiNode;122;320,832;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.PosVertexDataNode;46;-128,-96;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.PosVertexDataNode;74;-864,-688;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.PiNode;75;-832,-496;Inherit;False;1;0;FLOAT;2;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleTimeNode;105;112,832;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.DynamicAppendNode;125;-88.96088,743.5104;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RotateAboutAxisNode;119;544,592;Inherit;False;False;4;0;FLOAT3;0,0,1;False;1;FLOAT;0;False;2;FLOAT3;0.5,0.5,0;False;3;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.Vector2Node;109;640,224;Inherit;False;Property;_WobbleScale;WobbleScale;9;0;Create;True;0;0;0;False;0;False;1,1;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
-Node;AmplifyShaderEditor.DynamicAppendNode;47;80,-64;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleDivideOpNode;76;-592,-544;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;108;64,528;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;133;880,384;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT2;0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.NormalizeNode;48;176,-160;Inherit;False;False;1;0;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode;77;-370.5491,-534.4815;Inherit;False;HeightRelative;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleAddOpNode;134;1200,480;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT2;0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode;110;528,-336;Inherit;False;DirectionXZ;-1;True;1;0;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.GetLocalVarNode;78;-80,160;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;49;288,-80;Inherit;False;Property;_RadiusBottom;RadiusBottom;1;0;Create;True;0;0;0;False;0;False;0;0;-2;5;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;50;256,16;Inherit;False;Property;_RadiusTop;RadiusTop;2;0;Create;True;0;0;0;False;0;False;0;0;0;5;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;103;848,176;Inherit;False;Property;_WobbleStrength;WobbleStrength;8;0;Create;True;0;0;0;False;0;False;1;0;0;5;0;1;FLOAT;0
-Node;AmplifyShaderEditor.SamplerNode;102;1504,384;Inherit;True;Property;_WobbleTexture;WobbleTexture;7;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.LerpOp;54;656,-48;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.GetLocalVarNode;115;672,80;Inherit;False;110;DirectionXZ;1;0;OBJECT;;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;114;1312,192;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;112;896,16;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;55;768,-224;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.BreakToComponentsNode;117;1056,-16;Inherit;False;FLOAT2;1;0;FLOAT2;0,0;False;16;FLOAT;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT;5;FLOAT;6;FLOAT;7;FLOAT;8;FLOAT;9;FLOAT;10;FLOAT;11;FLOAT;12;FLOAT;13;FLOAT;14;FLOAT;15
-Node;AmplifyShaderEditor.BreakToComponentsNode;57;960,-304;Inherit;False;FLOAT2;1;0;FLOAT2;0,0;False;16;FLOAT;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT;5;FLOAT;6;FLOAT;7;FLOAT;8;FLOAT;9;FLOAT;10;FLOAT;11;FLOAT;12;FLOAT;13;FLOAT;14;FLOAT;15
-Node;AmplifyShaderEditor.PosVertexDataNode;59;800,-560;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.DynamicAppendNode;116;1216,-112;Inherit;False;FLOAT3;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.DynamicAppendNode;111;1280,-400;Inherit;False;FLOAT3;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.FunctionNode;14;-496,-192;Inherit;False;Radial Shear;-1;;2;c6dc9fc7fa9b08c4d95138f2ae88b526;0;4;1;FLOAT2;0,0;False;2;FLOAT2;0,0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.TextureCoordinatesNode;10;-320,-256;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.GetLocalVarNode;79;-400,-720;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.LerpOp;90;-32,-448;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.Vector2Node;91;-368,-400;Inherit;False;Property;_Vector4;Vector 4;4;0;Create;True;0;0;0;False;0;False;0,0;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
-Node;AmplifyShaderEditor.RangedFloatNode;85;144,-944;Inherit;False;Property;_BeansScale;BeansScale;3;0;Create;True;0;0;0;False;0;False;1;0;0.1;10;0;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;89;528,-864;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleAddOpNode;99;592,-720;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT2;0.5,0.5;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.TextureCoordinatesNode;98;624,-1104;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;97;-96,-1056;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.SimpleDivideOpNode;81;-772,-816;Inherit;False;2;0;FLOAT;1;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleTimeNode;96;-640,-1008;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;94;-832,-1168;Inherit;False;Property;_TextureVerticalSpeed;TextureVerticalSpeed;6;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.DynamicAppendNode;95;-112,-1232;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.RangedFloatNode;93;-608,-1312;Inherit;False;Property;_TextureHorizontalSpeed;TextureHorizontalSpeed;5;0;Create;True;0;0;0;False;0;False;0;0;-5;5;0;1;FLOAT;0
-Node;AmplifyShaderEditor.DynamicAppendNode;80;432,-640;Inherit;False;FLOAT2;4;0;FLOAT;1;False;1;FLOAT;1;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
-Node;AmplifyShaderEditor.TextureCoordinatesNode;73;-272,-896;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.SimpleSubtractOpNode;82;0,-848;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0.5;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleSubtractOpNode;86;0,-736;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0.5;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;83;208,-784;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;100;-432,-1088;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleDivideOpNode;101;-272,-1280;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SamplerNode;12;1344,-816;Inherit;True;Property;_Beans;Beans;0;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.SimpleAddOpNode;60;1664,-448;Inherit;False;3;3;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;2;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.TextureCoordinatesNode;106;1040,224;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.FractNode;127;272,1008;Inherit;False;1;0;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.PosVertexDataNode;74;-1872,-144;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.PiNode;75;-1888,80;Inherit;False;1;0;FLOAT;2;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;123;-448,1552;Inherit;False;Property;_WobbleMoveSpeedX;WobbleMoveSpeedX;9;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;124;-432,1664;Inherit;False;Property;_WobbleMoveSpeedY;WobbleMoveSpeedY;10;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.PosVertexDataNode;46;-1888,-416;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleDivideOpNode;76;-1632,48;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;125;-112,1616;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleTimeNode;105;-128,1744;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;47;-1680,-368;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RegisterLocalVarNode;77;-1456,128;Inherit;False;HeightRelative;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;108;48,1616;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.Vector2Node;109;800,1200;Inherit;False;Property;_WobbleScale;WobbleScale;8;0;Create;True;0;0;0;False;0;False;1,1;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
+Node;AmplifyShaderEditor.NormalizeNode;48;-1536,-496;Inherit;False;False;1;0;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RangedFloatNode;50;-32,-368;Inherit;False;Property;_RadiusTop;RadiusTop;2;0;Create;True;0;0;0;False;0;False;0;0;0;5;0;1;FLOAT;0
+Node;AmplifyShaderEditor.GetLocalVarNode;78;336,16;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;49;-160,-560;Inherit;False;Property;_RadiusBottom;RadiusBottom;1;0;Create;True;0;0;0;False;0;False;0;0;0;2;0;1;FLOAT;0
+Node;AmplifyShaderEditor.TextureCoordinatesNode;106;1040,1328;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RegisterLocalVarNode;110;-1376,-496;Inherit;False;DirectionXZ;-1;True;1;0;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RangedFloatNode;103;1632,1024;Inherit;False;Property;_WobbleStrength;WobbleStrength;7;0;Create;True;0;0;0;False;0;False;1;0;0;5;0;1;FLOAT;0
+Node;AmplifyShaderEditor.LerpOp;150;880,-32;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SamplerNode;102;1808,1280;Inherit;True;Property;_WobbleTexture;WobbleTexture;6;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;114;2096,1040;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.GetLocalVarNode;115;1280,864;Inherit;False;110;DirectionXZ;1;0;OBJECT;;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;167;1104,-16;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;1;False;1;FLOAT;0
+Node;AmplifyShaderEditor.GetLocalVarNode;137;1040,-144;Inherit;False;110;DirectionXZ;1;0;OBJECT;;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.PosVertexDataNode;59;1520,-432;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.GetLocalVarNode;186;1456,-208;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;185;1520,-112;Inherit;False;Property;_Float3;Float 3;16;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;55;1296,-112;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;112;2320,880;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;187;1904,-224;Inherit;False;3;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.BreakToComponentsNode;117;2080,736;Inherit;False;FLOAT2;1;0;FLOAT2;0,0;False;16;FLOAT;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT;5;FLOAT;6;FLOAT;7;FLOAT;8;FLOAT;9;FLOAT;10;FLOAT;11;FLOAT;12;FLOAT;13;FLOAT;14;FLOAT;15
+Node;AmplifyShaderEditor.BreakToComponentsNode;57;1568,-16;Inherit;False;FLOAT2;1;0;FLOAT2;0,0;False;16;FLOAT;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT;5;FLOAT;6;FLOAT;7;FLOAT;8;FLOAT;9;FLOAT;10;FLOAT;11;FLOAT;12;FLOAT;13;FLOAT;14;FLOAT;15
+Node;AmplifyShaderEditor.LerpOp;189;2016,-80;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;116;2240,640;Inherit;False;FLOAT3;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.DynamicAppendNode;111;1888,64;Inherit;False;FLOAT3;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.DynamicAppendNode;188;2128,-368;Inherit;False;FLOAT3;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.TextureCoordinatesNode;126;-32,1392;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.Compare;135;592,1184;Inherit;False;2;4;0;FLOAT2;0,0;False;1;FLOAT2;1,1;False;2;FLOAT2;0,0;False;3;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RangedFloatNode;94;-880,-1232;Inherit;False;Property;_TextureVerticalSpeed;TextureVerticalSpeed;5;0;Create;True;0;0;0;False;0;False;0;0;-1;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.GetLocalVarNode;79;-352,-192;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;95;-288,-1328;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SamplerNode;12;1824,-608;Inherit;True;Property;_Beans;Beans;0;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.GetLocalVarNode;138;-944,-864;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;93;-880,-1392;Inherit;False;Property;_TextureHorizontalSpeed;TextureHorizontalSpeed;4;0;Create;True;0;0;0;False;0;False;0;0;-5;5;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleDivideOpNode;101;-640,-1040;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.LerpOp;90;-672,-688;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.TextureCoordinatesNode;142;-128,-720;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RangedFloatNode;170;-360.6221,-1122.563;Inherit;False;Property;_Float2;Float 2;13;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;168;528,-608;Inherit;False;3;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleDivideOpNode;158;224,-544;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;166;928,-1216;Inherit;False;Property;_Float0;Float 0;12;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;171;-48,-1376;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;97;-80,-1104;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.DynamicAppendNode;146;1376,-544;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;173;1552,-736;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleTimeNode;96;-384,-1024;Inherit;False;1;0;FLOAT;1;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;133;1584,1168;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.TFHCRemapNode;136;384,1392;Inherit;False;5;0;FLOAT2;0,0;False;1;FLOAT2;1,1;False;2;FLOAT2;2,2;False;3;FLOAT2;1,1;False;4;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.RegisterLocalVarNode;174;2368,1072;Inherit;False;WobbleStrengthValue;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;179;1792,-800;Inherit;False;Property;_Float1;Float 1;15;0;Create;True;0;0;0;False;0;False;0;0;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;180;1968,-848;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.ColorNode;176;2112,-1152;Inherit;False;Property;_Color0;Color 0;14;1;[HDR];Create;True;0;0;0;False;0;False;0,0,0,0;0,0,0,0;True;0;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.GetLocalVarNode;175;1776,-960;Inherit;False;174;WobbleStrengthValue;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.LerpOp;178;2352,-976;Inherit;False;3;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;2;FLOAT;0;False;1;COLOR;0
+Node;AmplifyShaderEditor.BlendOpsNode;177;2512,-1152;Inherit;False;Overlay;True;3;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;2;FLOAT;1;False;1;COLOR;0
+Node;AmplifyShaderEditor.LerpOp;182;2688,-656;Inherit;False;3;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;2;FLOAT;0;False;1;COLOR;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;184;2416,-736;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;157;2352,-176;Inherit;False;3;3;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;2;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.GetLocalVarNode;181;2368,-400;Inherit;False;77;HeightRelative;1;0;OBJECT;;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;190;-336,-1504;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0.5;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;80;976,-1088;Inherit;False;FLOAT2;4;0;FLOAT2;1,0;False;1;FLOAT;1;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;145;1120,-704;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;191;1296,-672;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;0.5;False;1;FLOAT;0
+Node;AmplifyShaderEditor.TextureCoordinatesNode;73;560,-832;Inherit;False;0;-1;2;3;2;SAMPLER2D;;False;0;FLOAT2;1,1;False;1;FLOAT2;0,0;False;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RangedFloatNode;159;144,-832;Inherit;False;Property;_ScaleTextureBasedOnRadius;ScaleTextureBasedOnRadius;11;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;169;880,-560;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT;1;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;85;176,-1264;Inherit;False;Property;_BeansScale;BeansScale;3;0;Create;True;0;0;0;False;0;False;1;0;0.1;10;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;147;912,-784;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;0.5;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleDivideOpNode;192;888.7726,-947.0373;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;2;False;1;FLOAT;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;62;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ExtraPrePass;0;0;ExtraPrePass;5;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;0;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;64;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ShadowCaster;0;2;ShadowCaster;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=ShadowCaster;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;65;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthOnly;0;3;DepthOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;True;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;False;False;True;1;LightMode=DepthOnly;False;False;0;;0;0;Standard;0;False;0
@@ -2037,74 +1955,96 @@ Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;68;1632,-464;Float;False;Fa
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;69;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ScenePickingPass;0;7;ScenePickingPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Picking;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;70;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormals;0;8;DepthNormals;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;71;1632,-464;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormalsOnly;0;9;DepthNormalsOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;True;9;d3d11;metal;vulkan;xboxone;xboxseries;playstation;ps4;ps5;switch;0;;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;63;1968,-592;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;Tornado Hose;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;8;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForwardOnly;False;False;0;;0;0;Standard;21;Surface;0;0;  Blend;0;0;Two Sided;1;0;Forward Only;0;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;GPU Instancing;1;0;LOD CrossFade;1;0;Built-in Fog;1;0;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Vertex Position,InvertActionOnDeselection;0;638516259025609044;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
-WireConnection;136;0;126;0
-WireConnection;135;0;126;0
-WireConnection;135;2;136;0
-WireConnection;135;3;126;0
-WireConnection;122;0;121;0
-WireConnection;125;0;123;0
-WireConnection;125;1;124;0
-WireConnection;119;1;122;0
-WireConnection;119;3;135;0
-WireConnection;47;0;46;1
-WireConnection;47;1;46;3
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;63;2960,-416;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;Tornado Hose;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;8;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForwardOnly;False;False;0;;0;0;Standard;21;Surface;0;0;  Blend;0;0;Two Sided;1;0;Forward Only;0;0;Cast Shadows;1;0;  Use Shadow Threshold;0;0;GPU Instancing;1;0;LOD CrossFade;1;0;Built-in Fog;1;0;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Vertex Position,InvertActionOnDeselection;0;638516259025609044;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
 WireConnection;76;0;74;2
 WireConnection;76;1;75;0
+WireConnection;125;0;123;0
+WireConnection;125;1;124;0
+WireConnection;47;0;46;1
+WireConnection;47;1;46;3
+WireConnection;77;0;76;0
 WireConnection;108;0;125;0
 WireConnection;108;1;105;0
-WireConnection;133;0;119;0
-WireConnection;133;1;109;0
 WireConnection;48;0;47;0
-WireConnection;77;0;76;0
-WireConnection;134;0;133;0
-WireConnection;134;1;108;0
+WireConnection;106;0;109;0
+WireConnection;106;1;108;0
 WireConnection;110;0;48;0
-WireConnection;102;1;134;0
-WireConnection;54;0;49;0
-WireConnection;54;1;50;0
-WireConnection;54;2;78;0
+WireConnection;150;0;49;0
+WireConnection;150;1;50;0
+WireConnection;150;2;78;0
+WireConnection;102;1;106;0
 WireConnection;114;0;103;0
 WireConnection;114;1;102;1
+WireConnection;167;0;150;0
+WireConnection;55;0;137;0
+WireConnection;55;1;167;0
 WireConnection;112;0;114;0
 WireConnection;112;1;115;0
-WireConnection;55;0;48;0
-WireConnection;55;1;54;0
+WireConnection;187;0;59;2
+WireConnection;187;1;186;0
+WireConnection;187;2;185;0
 WireConnection;117;0;112;0
 WireConnection;57;0;55;0
+WireConnection;189;0;187;0
+WireConnection;189;1;59;2
+WireConnection;189;2;185;0
 WireConnection;116;0;117;0
 WireConnection;116;2;117;1
 WireConnection;111;0;57;0
 WireConnection;111;2;57;1
-WireConnection;90;0;91;1
-WireConnection;90;1;91;2
-WireConnection;90;2;77;0
-WireConnection;89;0;85;0
-WireConnection;89;1;99;0
-WireConnection;99;0;80;0
-WireConnection;98;0;89;0
-WireConnection;98;1;97;0
-WireConnection;97;0;95;0
-WireConnection;97;1;96;0
-WireConnection;95;0;101;0
+WireConnection;188;0;59;1
+WireConnection;188;1;189;0
+WireConnection;188;2;59;3
+WireConnection;135;0;126;0
+WireConnection;135;2;136;0
+WireConnection;135;3;126;0
+WireConnection;95;0;93;0
 WireConnection;95;1;94;0
-WireConnection;80;0;83;0
-WireConnection;80;1;86;0
-WireConnection;73;1;97;0
-WireConnection;82;0;73;1
-WireConnection;86;0;73;2
-WireConnection;83;0;82;0
-WireConnection;83;1;90;0
+WireConnection;12;1;173;0
 WireConnection;101;0;93;0
 WireConnection;101;1;90;0
-WireConnection;12;1;89;0
-WireConnection;60;0;59;0
-WireConnection;60;1;111;0
-WireConnection;60;2;116;0
-WireConnection;106;0;109;0
-WireConnection;106;1;108;0
-WireConnection;127;0;126;0
-WireConnection;63;2;12;0
-WireConnection;63;5;60;0
+WireConnection;90;2;138;0
+WireConnection;168;0;78;0
+WireConnection;168;1;158;0
+WireConnection;168;2;159;0
+WireConnection;158;0;50;0
+WireConnection;158;1;49;0
+WireConnection;171;0;190;0
+WireConnection;171;1;96;0
+WireConnection;97;0;95;0
+WireConnection;97;1;96;0
+WireConnection;146;0;145;0
+WireConnection;146;1;73;2
+WireConnection;173;0;97;0
+WireConnection;173;1;146;0
+WireConnection;136;0;126;0
+WireConnection;174;0;114;0
+WireConnection;180;0;179;0
+WireConnection;180;1;175;0
+WireConnection;178;0;12;0
+WireConnection;178;1;177;0
+WireConnection;178;2;180;0
+WireConnection;177;0;12;0
+WireConnection;177;1;176;0
+WireConnection;182;0;184;0
+WireConnection;182;1;12;0
+WireConnection;182;2;181;0
+WireConnection;184;0;12;0
+WireConnection;184;1;176;0
+WireConnection;157;0;188;0
+WireConnection;157;1;111;0
+WireConnection;157;2;116;0
+WireConnection;190;0;93;0
+WireConnection;80;0;97;0
+WireConnection;145;0;147;0
+WireConnection;145;1;169;0
+WireConnection;191;0;145;0
+WireConnection;73;0;85;0
+WireConnection;169;0;168;0
+WireConnection;147;0;73;1
+WireConnection;147;1;192;0
+WireConnection;192;0;85;0
+WireConnection;63;2;182;0
+WireConnection;63;5;157;0
 ASEEND*/
-//CHKSM=986983B2AA90B02B7CDB447501A4DBE496B4E27A
+//CHKSM=502E10AFD79B9848F5A2716A1692F39A4307DC7D
