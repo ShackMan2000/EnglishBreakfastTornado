@@ -27,6 +27,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 0e0e9272d3b94a14aa8cacb0651cc87d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _BigDistortionTexture:
+        m_Texture: {fileID: 2800000, guid: 2d24cc72bffb72346809567896899eb2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _NormalMap:
         m_Texture: {fileID: 2800000, guid: 1c8f9616db2291046bb06349c2058874, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -34,6 +38,10 @@ Material:
     - _TextureSample0:
         m_Texture: {fileID: 2800000, guid: 0e0e9272d3b94a14aa8cacb0651cc87d, type: 3}
         m_Scale: {x: 2, y: 1.37}
+        m_Offset: {x: 0, y: 0}
+    - _TwistTexture:
+        m_Texture: {fileID: 2800000, guid: 2d24cc72bffb72346809567896899eb2, type: 3}
+        m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WobbleTexture:
         m_Texture: {fileID: 2800000, guid: 3c349ffa7f4153f4eb5b32ca6e4a5031, type: 3}
@@ -58,26 +66,41 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaCutoff: 0.5
-    - _BeansScale: 1.55
+    - _BeansScale: 2.18
+    - _BigDistortionScale: 0.12
+    - _BigDistortionScrollX: 0.3
+    - _BigDistortionStrength: 1.65
     - _EnvironmentReflections: 1
-    - _Float0: 31.46
+    - _Float0: 0.54
     - _Float1: 0.63
     - _Float2: 246.1
-    - _Float3: 0.84
+    - _Float3: 1.7
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _RadiusBottom: 0.31
-    - _RadiusTop: 2.45
+    - _RadiusBottom: 0.74
+    - _RadiusGround: 2.11
+    - _RadiusLerpExpo: 2
+    - _RadiusTop: 3
     - _ReceiveShadows: 1
-    - _ScaleTextureBasedOnRadius: 0.327
+    - _ScaleTextureBasedOnRadius: 0.573
     - _SpecularHighlights: 1
-    - _TextureHorizontalSpeed: 0.93
-    - _TextureVerticalSpeed: 0
+    - _Test: 0
+    - _TextureHorizontalSpeed: 1.31
+    - _TextureVerticalSpeed: -0.31
+    - _TwistScale: 0.05
+    - _TwistScrollX: 0.5
+    - _TwistStrength: 2
+    - _TwistTop: 1
+    - _UseGroundRadius: 0.167
+    - _WobbleBoostsGlow: 1.68
+    - _WobbleBoostsGlowPower: 3.79
     - _WobbleMoveSpeedX: -0.3
-    - _WobbleMoveSpeedY: -0.63
-    - _WobbleStrength: 1.25
+    - _WobbleMoveSpeedY: -0.49
+    - _WobbleStrength: 0.97
+    - _WobbleStrengthGround: 0.09
     m_Colors:
-    - _Color0: {r: 6.883182, g: 1.9995865, b: 0, a: 0}
+    - _BigDistortionTexRemap: {r: 0.08, g: 0.98, b: 0, a: 0}
+    - _Color0: {r: 8.700441, g: 2.2697725, b: 0, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _Vector3: {r: -2.96, g: 2.13, b: 0, a: 0}
     - _Vector4: {r: 1, g: 1, b: 0, a: 0}
